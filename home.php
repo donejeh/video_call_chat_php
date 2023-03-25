@@ -44,10 +44,10 @@ $user = $userObj->userData();
             <div class="flex justify-between items-center border-b">
                 <div class="mx-2 flex items-center justify-center">
                     <div class="flex-shrink-0 mx-2 my-4 rounded-full overflow-hidden h-12 w-12  cursor-pointer">
-                        <img  class="w-full h-auto rounded-full select-none" src="PROFILE-IMAGE">
+                        <img  class="w-full h-auto rounded-full select-none" src="<?php echo BASE_URL.$user->profileImage ?>">
                     </div>
                     <div>
-                        <span class="font-medium select-none">NAME</span>
+                        <span class="font-medium select-none"><?php echo $user->name; ?></span>
                     </div>
                 </div>
                 <div class="flex items-center mx-4">
@@ -69,6 +69,8 @@ $user = $userObj->userData();
                 <h2 class="font-bold text-lg my-4  px-6 select-none">Users</h2>
                 <ul class="select-none">
                     <!-- USER-LIST -->
+
+                    <?php $userObj->getUsers(); ?>
                 </ul>
             </div>
         </div>
