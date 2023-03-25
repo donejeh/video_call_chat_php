@@ -2,7 +2,7 @@
 
 class User{
 
-    public $conn , $userID;
+    public $conn , $userID, $sessionID;
     
     /**
      * __construct
@@ -13,6 +13,7 @@ class User{
         $db = new DB();
         $this->conn = $db->connect();
         $this->userID = $this->ID();
+        $this->sessionID = $this->getSessionID();
     }
     
     /**
@@ -67,6 +68,10 @@ class User{
            return $_SESSION['userID'];
        }
     }
+
+    public function getSessionID(){
+       return session_id();
+    }
     
     /**
      * isLoggedIn
@@ -92,7 +97,7 @@ class User{
      * userData
      *
      * @param  mixed $userID
-     * @return void
+     * @return object
      */
     public function userData($userID =''){
         $userID =  ((empty($userID)) ? $this->userID : $userID);
@@ -142,32 +147,13 @@ class User{
         //     return false;
         // }
     }
-
-    // public function login($email, $password){
-
-    //     $sql = "SELECT * FROM users WHERE email = :email AND password = :password";
-    //     $stmt = $this->conn->prepare($sql);
-    //     $stmt->bindParam(":email", $email);
-    //     $stmt->bindParam(":password", $password);
-    //     $stmt->execute();
-
-    //     $user = $stmt->fetch(PDO::FETCH_OBJ);
-
-    //     if($user){
-    //         $_SESSION['user_id'] = $user->id;
-    //         $_SESSION['user_name'] = $user->name;
-    //         $_SESSION['user_email'] = $user->email;
-    //         $_SESSION['user_image'] = $user->image;
-    //         $_SESSION['user_status'] = $user->status;
-    //         $_SESSION['user_created_at'] = $user->created_at;
-
-    //         header("Location: ".BASE_URL."home.php");
-    //     }else{
-    //         $error = "Invalid email or password";
-    //         return $error;
-    //     }
-    // }
-
+    
+    /**
+     * userByUsername
+     *
+     * @param  mixed $username
+     * @return object
+     */
     public function userByUsername($username){
         $sql = "SELECT * FROM users WHERE username = :username";
         $stmt = $this->conn->prepare($sql);
@@ -181,5 +167,53 @@ class User{
         }else{
             return false;
         }
+    }
+    
+    /**
+     * updateSessionID
+     *
+     * @return void
+     */
+    public function updateSessionID(){
+        $sql = "UPDATE users SET sessionID = :sessionID WHERE userID = :userID";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(":sessionID", $this->sessionID, PDO::PARAM_STR);
+        $stmt->bindParam(":userID", $this->userID, PDO::PARAM_INT);
+        $stmt->execute();
+    }
+    
+    /**
+     * getUserBySessionID
+     *
+     * @param  mixed $sessionID
+     * @return void
+     */
+    public function getUserBySessionID($sessionID){
+        $sql = "SELECT * FROM users WHERE sessionID = :sessionID";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(":sessionID", $sessionID, PDO::PARAM_STR);
+        $stmt->execute();
+
+        $user = $stmt->fetch(PDO::FETCH_OBJ);
+
+        if($user){
+            return $user;
+        }else{
+            return false;
+        }
+    }
+    
+    /**
+     * updateProfileImage
+     *
+     * @param  mixed $profileImage
+     * @return void
+     */
+    public function updateProfileImage($profileImage){
+        $sql = "UPDATE users SET profileImage = :profileImage WHERE userID = :userID";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(":profileImage", $profileImage, PDO::PARAM_STR);
+        $stmt->bindParam(":userID", $this->userID, PDO::PARAM_INT);
+        $stmt->execute();
     }
 }
