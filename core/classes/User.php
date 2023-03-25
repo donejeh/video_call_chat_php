@@ -167,4 +167,19 @@ class User{
     //         return $error;
     //     }
     // }
+
+    public function userByUsername($username){
+        $sql = "SELECT * FROM users WHERE username = :username";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(":username", $username);
+        $stmt->execute();
+
+        $user = $stmt->fetch(PDO::FETCH_OBJ);
+
+        if($user){
+            return $user;
+        }else{
+            return false;
+        }
+    }
 }
