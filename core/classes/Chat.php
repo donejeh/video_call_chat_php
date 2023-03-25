@@ -3,18 +3,30 @@ namespace MyApp;
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
 
+
 class Chat implements MessageComponentInterface {
     protected $clients;
+    public $userObj, $data;
 
     public function __construct() {
         $this->clients = new \SplObjectStorage;
+        $this->userObj = new \MyApp\User();
     }
 
     public function onOpen(ConnectionInterface $conn) {
         // Store the new connection to send messages to later
-        $this->clients->attach($conn);
 
-        echo "New connection! ({$conn->resourceId})\n";
+        $queryString = $conn->httpRequest->getUri()->getQuery();
+        parse_str($queryString, $query);
+
+        if($data = $this->userObj->getUserBySessionID($query['token'])){
+            $this->data = $data;
+            $conn->data = $data;
+            $this->clients->attach($conn);
+            //var_dump($data);
+            $this->userObj->updateConnection($data->userID, $conn->resourceId);
+            echo "New connection! ({$data->username})\n";
+        }
     }
 
     public function onMessage(ConnectionInterface $from, $msg) {

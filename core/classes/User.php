@@ -1,5 +1,6 @@
 <?php
-
+namespace MyApp;
+use PDO;
 class User{
 
     public $conn , $userID, $sessionID;
@@ -10,7 +11,7 @@ class User{
      * @return void
      */
     public function  __construct(){
-        $db = new DB();
+        $db = new \MyApp\DB();
         $this->conn = $db->connect();
         $this->userID = $this->ID();
         $this->sessionID = $this->getSessionID();
@@ -181,12 +182,21 @@ class User{
         $stmt->bindParam(":userID", $this->userID, PDO::PARAM_INT);
         $stmt->execute();
     }
+
+    public function updateConnection($userID,$connectionID){
+        $sql = "UPDATE users SET connectionID = :connectionID WHERE userID = :userID";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(":connectionID", $connectionID, PDO::PARAM_STR);
+        $stmt->bindParam(":userID", $userID, PDO::PARAM_INT);
+        $stmt->execute();
+    }
+
     
     /**
      * getUserBySessionID
      *
      * @param  mixed $sessionID
-     * @return void
+     * @return object
      */
     public function getUserBySessionID($sessionID){
         $sql = "SELECT * FROM users WHERE sessionID = :sessionID";

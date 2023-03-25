@@ -59,7 +59,7 @@ function send(type, data, sendTo) {
      }));
 }
 
-//send('', sendTo)
+//send('is-client-is-ready',null, sendTo)
 
 conn.onclose = e => {
     console.log("Connection closed!");
