@@ -3,7 +3,7 @@
 let callBtn = $('#callBtn');
 let declineBtn = $('#declineBtn');
 let answerBtn = $('#answerBtn');
-let callBox  = $('#callBox');
+let callBox = $('#callBox');
 
 let pc;
 let sendTo = callBtn.data('user');
@@ -24,10 +24,28 @@ const offerOptions = {
     //offerToReceiveVideo: 1
 }
 
+//get connection for peer to peer
 function getConnect() {
     if (!pc) {
         pc = new RTCPeerConnection();
     }
+}
+
+// create answer for client to pick up the call
+async function createAnswer(sendTo, data) {
+    if (!pc) {
+         getConnect();
+    }
+    if (!localStream) {
+        await getCam(); 
+    }
+
+     sendIceCandidates(sendTo);
+    await pc.setRemoteDescription(data);
+    await pc.createAnswer()
+    await  pc.setLocalDescription(pc.localDescription);
+    send('client-answer', pc.localDescription, sendTo);
+   
 }
 
 //ask for media input
@@ -36,7 +54,7 @@ async function getCam() {
     try {
 
         if (!pc) {
-            await getConnect();
+             getConnect();
         }
 
         mediaStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
@@ -51,7 +69,7 @@ async function getCam() {
 
 //create offer
 async function createOffer(sendTo) {
-    await sendIceCandidates(sendTo);
+     sendIceCandidates(sendTo);
     pc.createOffer(offerOptions);
     pc.setLocalDescription(pc.localDescription);
     send('client-offer', pc.localDescription, sendTo);
@@ -63,7 +81,7 @@ async function createOffer(sendTo) {
     //     console.log(error);
     // });
 
-    
+
 }
 function sendIceCandidates(sendTo) {
     pc.onicecandidate = e => {
@@ -72,7 +90,25 @@ function sendIceCandidates(sendTo) {
             send('client-candidate', e.candidate, sendTo);
         }
     }
+    pc.ontrack = e => {
+        $('#videoBox').removeClass('hidden');
+        $('#profile').addClass('hidden');
+        remoteVideo.srcObject = e.streams[0];
+    }
 }
+
+function hangUp() {
+    send('client-hangup', null, sendTo);
+    pc.close();
+    pc = null;
+}
+
+
+$("#callBtn").on('click', function () {
+    getCam();
+    send('is-client-ready', null, sendTo);
+});
+
 $("#callBtn").on('click', function () {
     getCam();
     send('is-client-ready', null, sendTo);
@@ -94,16 +130,29 @@ conn.onmessage = async e => {
     $("#profileImage").attr('src', profileImage);
 
     switch (type) {
-        case 'is-client-ready':
-            if(!pc){
-               await getConnect();
+        case 'client-candidate':
+            if (pc.localDescription) {
+                await pc.addIceCandidate(new RTCIceCandidate(data));
             }
-            if(pc.iceConnectionState == 'connected'){
+        break
+        case 'is-client-ready':
+            if (!pc) {
+                 getConnect();
+            }
+            if (pc.iceConnectionState == 'connected') {
                 send('client-already-oncall');
-            }else{
+            } else {
                 //display pop
                 displayCall();
 
+                answerBtn.on('click', async function () {
+
+                    callBox.addClass('hidden');
+                    $('.wrapper').removeClass('glass');
+                    send('client-is-ready', null, sendTo);
+                });
+
+                //when user click on rejected button
                 declineBtn.on('click', function () {
                     send('client-rejected', null, sendTo);
                     callBox.addClass('hidden');
@@ -111,26 +160,47 @@ conn.onmessage = async e => {
                     location.reload(true);
                 });
             }
+            break;
+        case 'client-answer':
+            if (pc.localDescription) {          
+                await pc.setRemoteDescription(data);
+                $('#callTimer').timer({format: '%m:%s'});
+               
+            }
         break;
+
+        case 'client-offer':
+            createAnswer(sendTo, data);
+            $('#callTimer').timer({format: '%m:%s'});
+            break;
+        case 'client-is-ready':
+            createOffer(sendTo);
+            break;
         case 'client-already-oncall':
             //display popup that user is already on call
             setTimeout('location.reload(true);', 3000);
-        break;
+            break;
 
         case 'client-rejected':
             //display popup that user rejrcted the call
             alert('User rejected the call');
-        break;
+            break;
+
+        case 'client-hangup':
+            //display popup that user is already on call
+            alert('User hangup the call');
+            setTimeout('location.reload(true);', 2000);
+            break;
     }
     console.log(e.data);
 }
 
 function send(type, data, sendTo) {
-    conn.send(JSON.stringify({ 
-        type:type, 
-        data:data,
-        sendTo:sendTo
-     }));
+    conn.send(JSON.stringify({
+        type: type,
+        data: data,
+        sendTo: sendTo
+    }));
 }
 
 //send('is-client-is-ready',null, sendTo)
@@ -144,3 +214,4 @@ function displayCall() {
     callBox.removeClass('hidden');
     $('.wrapper').addClass('glass');
 }
+
