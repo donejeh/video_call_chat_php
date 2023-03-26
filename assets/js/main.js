@@ -4,6 +4,8 @@ let callBtn = $('#callBtn');
 let declineBtn = $('#declineBtn');
 let answerBtn = $('#answerBtn');
 let callBox = $('#callBox');
+let alertBox = $('#alertBox');
+
 
 let pc;
 let sendTo = callBtn.data('user');
@@ -16,18 +18,26 @@ const remoteVideo = document.querySelector('#remoteVideo');
 //media constraints
 const mediaConstraints = {
     video: true,
+    audio: true
+}
+
+// about stun and turn server
+const config = {
+    iceServers: [
+        {urls:'stun:stun1.l.google.com:19302'},
+    ]
 }
 
 // what need to get from other user
 const offerOptions = {
     offerToReceiveAudio: 1,
-    //offerToReceiveVideo: 1
+    offerToReceiveVideo: 1
 }
 
 //get connection for peer to peer
 function getConnect() {
     if (!pc) {
-        pc = new RTCPeerConnection();
+        pc = new RTCPeerConnection(config);
     }
 }
 
@@ -139,26 +149,35 @@ conn.onmessage = async e => {
             if (!pc) {
                  getConnect();
             }
-            if (pc.iceConnectionState == 'connected') {
+            if (pc.iceConnectionState === 'connected') {
                 send('client-already-oncall');
             } else {
                 //display pop
                 displayCall();
 
-                answerBtn.on('click', async function () {
+                if (windows.location.href.indexOf(username) > -1) {
+                    answerBtn.on('click', () => {
+
+                        callBox.addClass('hidden');
+                        $('.wrapper').removeClass('glass');
+                        send('client-is-ready', null, sendTo);
+                    });
+                }else{
+                //when user click on rejected button
+                answerBtn.on('click', () => {
 
                     callBox.addClass('hidden');
-                    $('.wrapper').removeClass('glass');
-                    send('client-is-ready', null, sendTo);
+                   redirectToCall(username,by);
                 });
-
-                //when user click on rejected button
+                }
+               
                 declineBtn.on('click', function () {
                     send('client-rejected', null, sendTo);
                     callBox.addClass('hidden');
                     $('.wrapper').removeClass('glass');
                     location.reload(true);
                 });
+              
             }
             break;
         case 'client-answer':
@@ -178,17 +197,19 @@ conn.onmessage = async e => {
             break;
         case 'client-already-oncall':
             //display popup that user is already on call
-            setTimeout('location.reload(true);', 3000);
+            displayAlert(username,profileImage,'User is on another call');
+            setTimeout('location.reload(true);', 2000);
             break;
 
         case 'client-rejected':
             //display popup that user rejrcted the call
-            alert('User rejected the call');
+            displayAlert(username,profileImage,'User is rejected the call');
+            setTimeout('location.reload(true);', 2000);
             break;
 
         case 'client-hangup':
             //display popup that user is already on call
-            alert('User hangup the call');
+            displayAlert(username,profileImage,'has ended the call');
             setTimeout('location.reload(true);', 2000);
             break;
     }
@@ -215,3 +236,36 @@ function displayCall() {
     $('.wrapper').addClass('glass');
 }
 
+function displayAlert(username,profile,message){
+    alertBox.find('#alertName').text(username);
+    alertBox.find('#alertImage').attr('src',profile);
+    alertBox.find('#alertMessage').text(message);
+
+    alertBox.removeClass('hidden');
+    $('.wrapper').addClass('glass');
+    $('#videoBox').addClass('hidden');
+    $('#profile').removeClass('hidden');
+}
+
+function redirectToCall(username , sendTo){
+    if(windows.location.href.indexOf(username) == -1){
+        sessionStorage.setItem('sendTo',sendTo);
+        sessionStorage.setItem('redirect',true);
+        windows.location.href = '/videocall/' + username;
+    }
+}
+
+if (sessionStorage.getItem('redirect') == 'true') {
+   
+    sendTo = sessionStorage.getItem('sendTo');
+    let waitForWs = setInterval(() => {
+        if (conn.readyState === 1) {
+            send('is-client-ready', null, sendTo);
+            clearInterval(waitForWs);
+        }
+    }, 500);
+
+    sessionStorage.removeItem('redirect');
+    sessionStorage.removeItem('sendTo');
+
+}
