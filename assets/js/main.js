@@ -1,6 +1,9 @@
 'use strict';
 
-let callBtn = $('#callBtn');// document.querySelector('#call-btn');
+let callBtn = $('#callBtn');
+let declineBtn = $('#declineBtn');
+let answerBtn = $('#answerBtn');
+let callBox  = $('#callBox');
 
 let pc;
 let sendTo = callBtn.data('user');
@@ -87,6 +90,9 @@ conn.onmessage = async e => {
     let profileImage = message.profileImage;
     let username = message.username;
 
+    $("#username").text(username);
+    $("#profileImage").attr('src', profileImage);
+
     switch (type) {
         case 'is-client-ready':
             if(!pc){
@@ -95,13 +101,25 @@ conn.onmessage = async e => {
             if(pc.iceConnectionState == 'connected'){
                 send('client-already-oncall');
             }else{
-                //display call button
-                alert('user is calling you');
+                //display pop
+                displayCall();
+
+                declineBtn.on('click', function () {
+                    send('client-rejected', null, sendTo);
+                    callBox.addClass('hidden');
+                    $('.wrapper').removeClass('glass');
+                    location.reload(true);
+                });
             }
         break;
         case 'client-already-oncall':
             //display popup that user is already on call
             setTimeout('location.reload(true);', 3000);
+        break;
+
+        case 'client-rejected':
+            //display popup that user rejrcted the call
+            alert('User rejected the call');
         break;
     }
     console.log(e.data);
@@ -119,4 +137,10 @@ function send(type, data, sendTo) {
 
 conn.onclose = e => {
     console.log("Connection closed!");
+}
+
+//this function will display the call box
+function displayCall() {
+    callBox.removeClass('hidden');
+    $('.wrapper').addClass('glass');
 }
